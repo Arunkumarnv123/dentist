@@ -29,7 +29,10 @@ app.use(helmet({
     crossOriginResourcePolicy: { policy: 'cross-origin' },
 }));
 app.use(cors({
-    origin: process.env.CORS_ORIGIN || 'http://localhost:4200',
+    origin: function (origin, callback) {
+        // Allow any origin for testing purposes while in development/MVP
+        callback(null, true);
+    },
     credentials: true,
 }));
 

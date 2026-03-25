@@ -52,14 +52,6 @@ const User = sequelize.define('User', {
         type: DataTypes.DATE,
         allowNull: true,
     },
-    reset_password_otp: {
-        type: DataTypes.STRING(6),
-        allowNull: true,
-    },
-    reset_password_expiry: {
-        type: DataTypes.DATE,
-        allowNull: true,
-    },
 }, {
     hooks: {
         beforeCreate: async (user) => {

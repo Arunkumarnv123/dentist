@@ -60,11 +60,9 @@ import { ApiService } from '../../services/api.service';
           </div>
 
           <div class="form-group">
-            <label class="form-label">Phone Number (10 digits)</label>
+            <label class="form-label">Phone Number</label>
             <input type="tel" class="form-control" formControlName="phone"
-                   placeholder="9876543210" maxlength="10" pattern="[0-9]{10}"
-                   [class.error]="isInvalid('phone')">
-            <div class="form-error" *ngIf="isInvalid('phone')">Phone must be exactly 10 digits (numbers only)</div>
+                   placeholder="+91 9876543210">
           </div>
 
           <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
@@ -195,7 +193,7 @@ export class RegisterComponent implements OnInit {
       full_name: ['', [Validators.required, Validators.minLength(2)]],
       age: ['', [Validators.required, Validators.min(0), Validators.max(120)]],
       gender: ['', Validators.required],
-      phone: ['', [Validators.pattern(/^[0-9]{10}$/)]],
+      phone: [''],
       address: [''],
       city: [''],
       priority: ['normal'],

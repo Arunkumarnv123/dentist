@@ -1,5 +1,6 @@
 const { Sequelize } = require('sequelize');
 const path = require('path');
+require('dotenv').config();
 
 // Default to a local postgres DB if not provided, but mostly expect online Neon DB URL
 const connectionString = process.env.DATABASE_URL || 'postgres://postgres:postgres@localhost:5432/dental_camp';

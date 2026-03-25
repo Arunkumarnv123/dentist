@@ -1,7 +1,6 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { BehaviorSubject, Observable, tap } from 'rxjs';
-import { Router } from '@angular/router';
 import { environment } from '../../environments/environment';
 
 export interface User {
@@ -24,19 +23,10 @@ export class AuthService {
     private currentUserSubject = new BehaviorSubject<User | null>(null);
     currentUser$ = this.currentUserSubject.asObservable();
 
-    constructor(private http: HttpClient, private router: Router) {
-        // On app startup, verify stored session is still valid
-        if (this.isTokenExpired()) {
-            this.logout();
-        } else {
-            const stored = localStorage.getItem('dental_user');
-            if (stored) {
-                try {
-                    this.currentUserSubject.next(JSON.parse(stored));
-                } catch {
-                    this.logout();
-                }
-            }
+    constructor(private http: HttpClient) {
+        const stored = localStorage.getItem('dental_user');
+        if (stored) {
+            this.currentUserSubject.next(JSON.parse(stored));
         }
     }
 
@@ -49,26 +39,7 @@ export class AuthService {
     }
 
     get isLoggedIn(): boolean {
-        return !!this.token && !this.isTokenExpired();
-    }
-
-    /**
-     * Decode JWT payload and check if the token has expired.
-     * Returns true if expired or invalid.
-     */
-    isTokenExpired(): boolean {
-        const token = localStorage.getItem('dental_token');
-        if (!token) return true;
-
-        try {
-            const payload = JSON.parse(atob(token.split('.')[1]));
-            // exp is in seconds, Date.now() is in milliseconds
-            const expiryMs = payload.exp * 1000;
-            return Date.now() >= expiryMs;
-        } catch {
-            // If token can't be decoded, treat it as expired
-            return true;
-        }
+        return !!this.token;
     }
 
     login(email: string, password: string): Observable<LoginResponse> {
@@ -83,17 +54,7 @@ export class AuthService {
     logout(): void {
         localStorage.removeItem('dental_token');
         localStorage.removeItem('dental_user');
-        localStorage.removeItem('dental_active_camp');
         this.currentUserSubject.next(null);
-    }
-
-    /**
-     * Called by the interceptor when a 401 is received.
-     * Clears session and redirects to login.
-     */
-    handleUnauthorized(): void {
-        this.logout();
-        this.router.navigate(['/login']);
     }
 
     hasRole(...roles: string[]): boolean {

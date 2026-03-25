@@ -31,13 +31,27 @@ import { AuthService } from '../../services/auth.service';
           <button type="submit" class="btn btn-primary btn-lg btn-block" [disabled]="loading">
             {{ loading ? 'Signing in...' : 'Sign In' }}
           </button>
-
-          <div style="text-align: center; margin-top: 1rem;">
-            <a routerLink="/forgot" style="color: #64748b; font-size: 0.85rem; text-decoration: none;">Forgotten password?</a>
-          </div>
         </form>
 
-
+        <div class="demo-credentials">
+          <p class="demo-title">Demo Accounts:</p>
+          <div class="demo-row" (click)="fillCredentials('admin@gmail.com', 'admin')">
+            <span class="badge badge-danger">Admin</span>
+            <span>admin@gmail.com</span>
+          </div>
+          <div class="demo-row" (click)="fillCredentials('dentist@gmail.com', 'dentist')">
+            <span class="badge badge-primary">Dentist</span>
+            <span>dentist@gmail.com</span>
+          </div>
+          <div class="demo-row" (click)="fillCredentials('campadmin@dental.com', 'admin123')">
+            <span class="badge badge-info">Camp Admin</span>
+            <span>campadmin@dental.com</span>
+          </div>
+          <div class="demo-row" (click)="fillCredentials('patient@dental.com', 'patient123')">
+            <span class="badge badge-success">Patient</span>
+            <span>patient@dental.com</span>
+          </div>
+        </div>
 
         <div class="register-link">
           <p>Are you a patient? <a routerLink="/patient-register">Register here</a></p>

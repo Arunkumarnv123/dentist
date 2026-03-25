@@ -38,9 +38,9 @@ import { AuthService } from '../../services/auth.service';
 
           <div class="form-row">
             <div class="form-group">
-              <label class="form-label">Phone (10 digits)</label>
+              <label class="form-label">Phone</label>
               <input type="tel" class="form-control" [(ngModel)]="form.phone" name="phone"
-                     placeholder="9876543210" maxlength="10" pattern="[0-9]{10}">
+                     placeholder="+91 9876543210">
             </div>
             <div class="form-group">
               <label class="form-label">City</label>
@@ -141,10 +141,6 @@ export class PatientRegisterComponent {
     register(): void {
         if (this.form.password !== this.confirmPassword) {
             this.error = 'Passwords do not match.';
-            return;
-        }
-        if (this.form.phone && !/^[0-9]{10}$/.test(this.form.phone)) {
-            this.error = 'Phone must be exactly 10 digits (numbers only).';
             return;
         }
         if (this.form.password.length < 6) {

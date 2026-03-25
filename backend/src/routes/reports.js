@@ -44,33 +44,12 @@ router.get('/:reportId/download',
                 return res.status(404).json({ error: 'Report not found', code: 'NOT_FOUND' });
             }
 
-            // If file is missing from disk, regenerate on demand
-            if (!report.pdf_path || !fs.existsSync(report.pdf_path)) {
-                try {
-                    const screening = await Screening.findByPk(report.screening_id);
-                    const patient = await Patient.findByPk(report.patient_id);
-                    const dentist = await User.findByPk(screening.dentist_id);
-                    const camp = await Camp.findByPk(report.camp_id);
+            if (report.status !== 'completed' || !report.pdf_path) {
+                return res.status(400).json({ error: 'Report not ready for download', code: 'REPORT_NOT_READY' });
+            }
 
-                    if (!screening || !patient || !dentist || !camp) {
-                        return res.status(404).json({ error: 'Missing data for PDF regeneration', code: 'DATA_MISSING' });
-                    }
-
-                    const pdfPath = await generatePDF({
-                        patient, screening, camp, dentist,
-                        reportId: report.id,
-                        version: report.version,
-                    });
-
-                    await report.update({
-                        pdf_path: pdfPath,
-                        status: 'completed',
-                        generated_at: new Date(),
-                    });
-                } catch (pdfError) {
-                    console.error('PDF regeneration on download failed:', pdfError);
-                    return res.status(500).json({ error: 'Failed to generate PDF', code: 'PDF_GENERATION_FAILED' });
-                }
+            if (!fs.existsSync(report.pdf_path)) {
+                return res.status(404).json({ error: 'PDF file not found', code: 'FILE_NOT_FOUND' });
             }
 
             await createAuditEntry({

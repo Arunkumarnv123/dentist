@@ -24,9 +24,18 @@ export class AuthService {
     currentUser$ = this.currentUserSubject.asObservable();
 
     constructor(private http: HttpClient) {
-        const stored = localStorage.getItem('dental_user');
-        if (stored) {
-            this.currentUserSubject.next(JSON.parse(stored));
+        // On startup, clear stale/expired tokens automatically
+        if (this.isTokenExpired()) {
+            this.logout();
+        } else {
+            const stored = localStorage.getItem('dental_user');
+            if (stored) {
+                try {
+                    this.currentUserSubject.next(JSON.parse(stored));
+                } catch {
+                    this.logout();
+                }
+            }
         }
     }
 
@@ -38,8 +47,24 @@ export class AuthService {
         return localStorage.getItem('dental_token');
     }
 
+    /** Decode JWT payload and check if token is expired (no library needed). */
+    isTokenExpired(): boolean {
+        const token = localStorage.getItem('dental_token');
+        if (!token) return true;
+        try {
+            const parts = token.split('.');
+            if (parts.length !== 3) return true;
+            const payload = JSON.parse(atob(parts[1]));
+            if (!payload.exp) return false;
+            // exp is in seconds; Date.now() is in milliseconds
+            return Date.now() >= payload.exp * 1000;
+        } catch {
+            return true;
+        }
+    }
+
     get isLoggedIn(): boolean {
-        return !!this.token;
+        return !!this.token && !this.isTokenExpired();
     }
 
     login(email: string, password: string): Observable<LoginResponse> {

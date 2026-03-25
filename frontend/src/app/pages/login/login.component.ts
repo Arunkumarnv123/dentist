@@ -33,25 +33,7 @@ import { AuthService } from '../../services/auth.service';
           </button>
         </form>
 
-        <div class="demo-credentials">
-          <p class="demo-title">Demo Accounts:</p>
-          <div class="demo-row" (click)="fillCredentials('admin@gmail.com', 'admin')">
-            <span class="badge badge-danger">Admin</span>
-            <span>admin@gmail.com</span>
-          </div>
-          <div class="demo-row" (click)="fillCredentials('dentist@gmail.com', 'dentist')">
-            <span class="badge badge-primary">Dentist</span>
-            <span>dentist@gmail.com</span>
-          </div>
-          <div class="demo-row" (click)="fillCredentials('campadmin@dental.com', 'admin123')">
-            <span class="badge badge-info">Camp Admin</span>
-            <span>campadmin@dental.com</span>
-          </div>
-          <div class="demo-row" (click)="fillCredentials('patient@dental.com', 'patient123')">
-            <span class="badge badge-success">Patient</span>
-            <span>patient@dental.com</span>
-          </div>
-        </div>
+
 
         <div class="register-link">
           <p>Are you a patient? <a routerLink="/patient-register">Register here</a></p>
@@ -109,33 +91,6 @@ import { AuthService } from '../../services/auth.service';
       margin-bottom: 1rem;
       text-align: center;
     }
-    .demo-credentials {
-      margin-top: 1.75rem;
-      padding-top: 1.25rem;
-      border-top: 1px solid var(--border);
-    }
-    .demo-title {
-      font-size: 0.8rem;
-      color: var(--text-muted);
-      margin-bottom: 0.75rem;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-    }
-    .demo-row {
-      display: flex;
-      align-items: center;
-      gap: 0.75rem;
-      padding: 0.5rem 0.75rem;
-      border-radius: 8px;
-      cursor: pointer;
-      transition: all 0.2s ease;
-      font-size: 0.85rem;
-      color: var(--text-secondary);
-    }
-    .demo-row:hover {
-      background: rgba(13, 148, 136, 0.1);
-      color: var(--text-primary);
-    }
     .register-link {
       margin-top: 1.25rem;
       text-align: center;
@@ -154,10 +109,6 @@ import { AuthService } from '../../services/auth.service';
     .register-link a:hover {
       text-decoration: underline;
     }
-    .badge-success {
-      background: rgba(16, 185, 129, 0.2);
-      color: #34d399;
-    }
   `]
 })
 export class LoginComponent {
@@ -171,11 +122,6 @@ export class LoginComponent {
       const dest = auth.currentUser?.role === 'patient' ? '/patient-portal' : '/dashboard';
       this.router.navigate([dest]);
     }
-  }
-
-  fillCredentials(email: string, password: string): void {
-    this.email = email;
-    this.password = password;
   }
 
   login(): void {

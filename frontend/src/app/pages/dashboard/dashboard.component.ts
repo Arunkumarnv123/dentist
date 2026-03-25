@@ -4,8 +4,8 @@ import { ApiService } from '../../services/api.service';
 import { AuthService } from '../../services/auth.service';
 
 @Component({
-    selector: 'app-dashboard',
-    template: `
+  selector: 'app-dashboard',
+  template: `
     <div class="main-content fade-in">
       <div class="container">
         <div class="page-header">
@@ -142,7 +142,7 @@ import { AuthService } from '../../services/auth.service';
       </div>
     </div>
   `,
-    styles: [`
+  styles: [`
     .clickable-card {
       cursor: pointer;
       transition: all 0.2s ease;
@@ -213,100 +213,126 @@ import { AuthService } from '../../services/auth.service';
   `]
 })
 export class DashboardComponent implements OnInit {
-    camps: any[] = [];
-    activeCampId: string = '';
-    analytics: any = null;
-    loading = false;
-    treatmentKeys: string[] = [];
+  camps: any[] = [];
+  activeCampId: string = '';
+  analytics: any = null;
+  loading = false;
+  treatmentKeys: string[] = [];
 
-    constructor(
-        public auth: AuthService,
-        private api: ApiService,
-        public router: Router
-    ) { }
+  constructor(
+    public auth: AuthService,
+    private api: ApiService,
+    public router: Router
+  ) { }
 
-    ngOnInit(): void {
-        if (!this.auth.isLoggedIn) {
-            this.router.navigate(['/login']);
-            return;
+  ngOnInit(): void {
+    if (!this.auth.isLoggedIn) {
+      this.router.navigate(['/login']);
+      return;
+    }
+    this.loadCamps();
+  }
+
+  loadCamps(): void {
+    this.api.getCamps().subscribe({
+      next: (res) => {
+        this.camps = res.camps;
+        if (this.camps.length > 0) {
+          const stored = localStorage.getItem('dental_active_camp');
+          this.activeCampId = stored && this.camps.find((c: any) => c.id === stored) ? stored : this.camps[0].id;
+          this.selectCamp();
         }
-        this.loadCamps();
-    }
+      },
+      error: (err) => console.error('Failed to load camps', err)
+    });
+  }
 
-    loadCamps(): void {
-        this.api.getCamps().subscribe({
-            next: (res) => {
-                this.camps = res.camps;
-                if (this.camps.length > 0) {
-                    const stored = localStorage.getItem('dental_active_camp');
-                    this.activeCampId = stored && this.camps.find((c: any) => c.id === stored) ? stored : this.camps[0].id;
-                    this.selectCamp();
-                }
-            },
-            error: (err) => console.error('Failed to load camps', err)
+  selectCamp(): void {
+    localStorage.setItem('dental_active_camp', this.activeCampId);
+    this.loadAnalytics();
+  }
+
+  loadAnalytics(): void {
+    if (!this.activeCampId) return;
+    this.loading = true;
+    this.api.getAnalytics(this.activeCampId).subscribe({
+      next: (data) => {
+        this.analytics = data;
+        this.treatmentKeys = Object.keys(data.treatment_breakdown || {});
+        this.loading = false;
+      },
+      error: () => { this.loading = false; }
+    });
+  }
+
+  getPercentage(part: number, total: number): number {
+    return total > 0 ? Math.round((part / total) * 100) : 0;
+  }
+
+  getHygienePercent(level: string): number {
+    if (!this.analytics) return 0;
+    const total = this.analytics.findings.total_screenings;
+    if (total === 0) return 0;
+    return Math.round((this.analytics.findings.oral_hygiene[level] / total) * 100);
+  }
+
+  openRegistration(): void {
+    window.open(`/register/${this.activeCampId}`, '_blank');
+  }
+
+  copyRegLink(): void {
+    const link = `${window.location.origin}/register/${this.activeCampId}`;
+    navigator.clipboard.writeText(link);
+    alert('Registration link copied!');
+  }
+
+  exportCSV(): void {
+    if (!this.activeCampId) return;
+    this.api.generateExport(this.activeCampId, 'csv').subscribe({
+      next: (res) => {
+        // Download the file directly from backend
+        const downloadUrl = `${this.api.baseUrl}${res.download_url.replace('/api', '')}`;
+        this.api.downloadFile(downloadUrl).subscribe({
+          next: (blob) => {
+            const a = document.createElement('a');
+            const objectUrl = URL.createObjectURL(blob);
+            a.href = objectUrl;
+            a.download = `camp_export_${this.activeCampId}.csv`;
+            a.click();
+            URL.revokeObjectURL(objectUrl);
+          },
+          error: () => alert('Failed to download CSV file.')
         });
-    }
+      },
+      error: (err) => alert('Export failed: ' + (err.error?.error || 'Unknown error'))
+    });
+  }
 
-    selectCamp(): void {
-        localStorage.setItem('dental_active_camp', this.activeCampId);
-        this.loadAnalytics();
-    }
-
-    loadAnalytics(): void {
-        if (!this.activeCampId) return;
-        this.loading = true;
-        this.api.getAnalytics(this.activeCampId).subscribe({
-            next: (data) => {
-                this.analytics = data;
-                this.treatmentKeys = Object.keys(data.treatment_breakdown || {});
-                this.loading = false;
-            },
-            error: () => { this.loading = false; }
+  exportPDF(): void {
+    if (!this.activeCampId) return;
+    // Camp-level PDF export uses the CSV export as a data dump;
+    // individual screening PDFs are available in the queue/screening view.
+    this.api.generateExport(this.activeCampId, 'csv').subscribe({
+      next: (res) => {
+        const downloadUrl = `${this.api.baseUrl}${res.download_url.replace('/api', '')}`;
+        this.api.downloadFile(downloadUrl).subscribe({
+          next: (blob) => {
+            const a = document.createElement('a');
+            const objectUrl = URL.createObjectURL(blob);
+            a.href = objectUrl;
+            a.download = `camp_report_${this.activeCampId}.csv`;
+            a.click();
+            URL.revokeObjectURL(objectUrl);
+          },
+          error: () => alert('Failed to download report.')
         });
-    }
+      },
+      error: (err) => alert('Export failed: ' + (err.error?.error || 'Unknown error'))
+    });
+  }
 
-    getPercentage(part: number, total: number): number {
-        return total > 0 ? Math.round((part / total) * 100) : 0;
-    }
-
-    getHygienePercent(level: string): number {
-        if (!this.analytics) return 0;
-        const total = this.analytics.findings.total_screenings;
-        if (total === 0) return 0;
-        return Math.round((this.analytics.findings.oral_hygiene[level] / total) * 100);
-    }
-
-    openRegistration(): void {
-        window.open(`/register/${this.activeCampId}`, '_blank');
-    }
-
-    copyRegLink(): void {
-        const link = `${window.location.origin}/register/${this.activeCampId}`;
-        navigator.clipboard.writeText(link);
-        alert('Registration link copied!');
-    }
-
-    exportCSV(): void {
-        this.api.generateExport(this.activeCampId, 'csv').subscribe({
-            next: (res) => {
-                alert(`Export generated! ${res.record_count} records. Download URL: ${res.download_url}`);
-            },
-            error: (err) => alert('Export failed: ' + (err.error?.error || 'Unknown error'))
-        });
-    }
-
-    exportPDF(): void {
-        this.api.generateExport(this.activeCampId, 'pdf').subscribe({
-            next: (res) => {
-                alert(`PDF Export generated! Download URL: ${res.download_url}`);
-                window.open(res.download_url, '_blank');
-            },
-            error: (err) => alert('PDF Export failed: ' + (err.error?.error || 'Unknown error. Check backend support.'))
-        });
-    }
-
-    goToQueue(statusStr: string): void {
-        const queryParams = statusStr === 'all' ? {} : { status: statusStr };
-        this.router.navigate(['/queue', this.activeCampId], { queryParams });
-    }
+  goToQueue(statusStr: string): void {
+    const queryParams = statusStr === 'all' ? {} : { status: statusStr };
+    this.router.navigate(['/queue', this.activeCampId], { queryParams });
+  }
 }

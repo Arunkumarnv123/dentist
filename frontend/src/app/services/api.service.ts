@@ -30,6 +30,7 @@ export class ApiService {
         return this.http.get(`${this.baseUrl}/camps/${campId}/qr`);
     }
 
+
     // ── Patients ──
     registerPatient(campId: string, data: any): Observable<any> {
         return this.http.post(`${this.baseUrl}/camps/${campId}/register`, data);
@@ -97,6 +98,11 @@ export class ApiService {
     // ── Analytics ──
     getAnalytics(campId: string): Observable<any> {
         return this.http.get(`${this.baseUrl}/analytics/camps/${campId}`);
+    }
+
+    // ── File Download ──
+    downloadFile(url: string): Observable<Blob> {
+        return this.http.get(url, { responseType: 'blob' });
     }
 
     // ── Exports ──

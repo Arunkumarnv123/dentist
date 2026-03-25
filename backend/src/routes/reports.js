@@ -1,11 +1,10 @@
 const express = require('express');
 const path = require('path');
 const fs = require('fs');
-const { Report, Patient, Screening, Camp } = require('../models');
+const { Report, Patient, Screening, Camp, User } = require('../models');
 const { authenticate } = require('../middleware/auth');
 const { createAuditEntry } = require('../middleware/auditLogger');
 const { generatePDF } = require('../services/pdfService');
-const { User } = require('../models');
 
 const router = express.Router();
 

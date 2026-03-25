@@ -109,13 +109,13 @@ router.post('/register-patient',
         body('name').trim().notEmpty().withMessage('Name is required'),
         body('email').isEmail().normalizeEmail().withMessage('Valid email required'),
         body('password').isLength({ min: 6 }).withMessage('Password must be at least 6 characters'),
-        body('phone').optional().trim(),
+        body('phone').optional().trim().matches(/^[0-9]{10}$/).withMessage('Phone must be exactly 10 digits'),
         body('aadhaar_number').optional().trim().isLength({ min: 12, max: 12 }),
     ],
     validate,
     async (req, res) => {
         try {
-            const { name, email, password, phone, aadhaar_number } = req.body;
+            const { name, email, password, phone } = req.body;
 
             // Check if email already exists
             const existing = await User.findOne({ where: { email } });
@@ -163,7 +163,7 @@ router.post('/register-dentist',
         body('name').trim().notEmpty().withMessage('Name is required'),
         body('email').isEmail().normalizeEmail().withMessage('Valid email required'),
         body('password').isLength({ min: 6 }).withMessage('Password must be at least 6 characters'),
-        body('phone').optional().trim(),
+        body('phone').optional().trim().matches(/^[0-9]{10}$/).withMessage('Phone must be exactly 10 digits'),
     ],
     validate,
     async (req, res) => {

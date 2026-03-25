@@ -40,7 +40,8 @@ import { AuthService } from '../../services/auth.service';
             <div class="form-group">
               <label class="form-label">Phone</label>
               <input type="tel" class="form-control" [(ngModel)]="form.phone" name="phone"
-                     placeholder="+91 9876543210">
+                     placeholder="10-digit mobile number" pattern="[0-9]*" maxlength="10"
+                     (input)="sanitizePhone()">
             </div>
             <div class="form-group">
               <label class="form-label">City</label>
@@ -138,6 +139,12 @@ export class PatientRegisterComponent {
         public router: Router
     ) { }
 
+    sanitizePhone(): void {
+        if (this.form.phone) {
+            this.form.phone = this.form.phone.replace(/[^0-9]/g, '');
+        }
+    }
+
     register(): void {
         if (this.form.password !== this.confirmPassword) {
             this.error = 'Passwords do not match.';
@@ -145,6 +152,10 @@ export class PatientRegisterComponent {
         }
         if (this.form.password.length < 6) {
             this.error = 'Password must be at least 6 characters.';
+            return;
+        }
+        if (this.form.phone && !/^[0-9]{10}$/.test(this.form.phone)) {
+            this.error = 'Please enter a valid 10-digit phone number.';
             return;
         }
 

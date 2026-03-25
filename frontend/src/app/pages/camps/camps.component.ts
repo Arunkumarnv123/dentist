@@ -477,7 +477,7 @@ export class CampsComponent implements OnInit {
   showQR(camp: any): void {
     this.qrLoading = true;
     this.api.getCampQR(camp.id).subscribe({
-      next: (res) => {
+      next: (res: any) => {
         this.qrData = res;
         this.qrLoading = false;
       },

@@ -1,5 +1,4 @@
 const PDFDocument = require('pdfkit');
-const QRCode = require('qrcode');
 const fs = require('fs');
 const path = require('path');
 require('dotenv').config();
@@ -18,11 +17,6 @@ if (!fs.existsSync(REPORTS_DIR)) {
 async function generatePDF({ patient, screening, camp, dentist, reportId, version }) {
     const fileName = `report_${patient.patient_id}_v${version}_${Date.now()}.pdf`;
     const filePath = path.join(REPORTS_DIR, fileName);
-
-    // Generate QR code as data URL
-    const reportUrl = `${process.env.CORS_ORIGIN || 'http://localhost:4200'}/reports/${reportId}`;
-    const qrDataUrl = await QRCode.toDataURL(reportUrl, { width: 120, margin: 1 });
-    const qrBuffer = Buffer.from(qrDataUrl.split(',')[1], 'base64');
 
     return new Promise((resolve, reject) => {
         try {
@@ -62,10 +56,17 @@ async function generatePDF({ patient, screening, camp, dentist, reportId, versio
 
             const rightCol = [
                 ['Phone', patient.phone || 'N/A'],
-                ['Organization', patient.organization],
-                ['Department', patient.department || 'N/A'],
-                ['Aadhaar No.', patient.aadhaar_number || 'N/A'],
             ];
+
+            // Helper to check if a value is meaningful
+            const isValid = (val) => val && val !== 'undefined' && val !== 'N/A' && val !== '';
+
+            if (isValid(patient.organization)) {
+                rightCol.push(['Organization', patient.organization]);
+            }
+            if (isValid(patient.department)) {
+                rightCol.push(['Department', patient.department]);
+            }
 
             let y = infoStartY;
             leftCol.forEach(([label, value]) => {
@@ -155,10 +156,8 @@ async function generatePDF({ patient, screening, camp, dentist, reportId, versio
             }
             doc.moveDown(1);
 
-            // ── QR Code and Dentist Info ──
+            // ── Dentist Info ──
             const bottomY = doc.y;
-            doc.image(qrBuffer, 460, bottomY, { width: 80 });
-
             doc.fontSize(10).font('Helvetica-Bold').text('Screened By:', 50, bottomY);
             doc.font('Helvetica').text(dentist.name);
             doc.moveDown(1.5);

@@ -31,14 +31,25 @@ const Patient = sequelize.define('Patient', {
         allowNull: false,
     },
     phone: {
-        type: DataTypes.STRING(20),
+        type: DataTypes.STRING(10),
         allowNull: true,
+        validate: {
+            is: /^[0-9]{10}$/,
+        },
     },
     address: {
         type: DataTypes.STRING,
         allowNull: true,
     },
     city: {
+        type: DataTypes.STRING,
+        allowNull: true,
+    },
+    organization: {
+        type: DataTypes.STRING,
+        allowNull: true,
+    },
+    department: {
         type: DataTypes.STRING,
         allowNull: true,
     },

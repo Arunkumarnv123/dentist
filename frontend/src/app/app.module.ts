@@ -19,6 +19,7 @@ import { BookAppointmentComponent } from './pages/book-appointment/book-appointm
 import { PatientPortalComponent } from './pages/patient-portal/patient-portal.component';
 import { PatientStatusComponent } from './pages/patient-status/patient-status.component';
 import { DentistRegisterComponent } from './pages/dentist-register/dentist-register.component';
+import { ForgotPasswordComponent } from './pages/forgot-password/forgot-password.component';
 
 @NgModule({
   declarations: [
@@ -35,6 +36,7 @@ import { DentistRegisterComponent } from './pages/dentist-register/dentist-regis
     PatientPortalComponent,
     PatientStatusComponent,
     DentistRegisterComponent,
+    ForgotPasswordComponent,
   ],
   imports: [
     BrowserModule,

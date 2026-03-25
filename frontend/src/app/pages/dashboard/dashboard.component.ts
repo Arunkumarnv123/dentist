@@ -125,11 +125,8 @@ import { AuthService } from '../../services/auth.service';
             <button class="btn btn-accent btn-lg" (click)="openRegistration()">
               ➕ New Registration
             </button>
-            <button class="btn btn-outline" *ngIf="auth.hasRole('camp_admin', 'system_admin')" (click)="exportCSV()">
-              📥 Export CSV
-            </button>
-            <button class="btn btn-outline" *ngIf="auth.hasRole('camp_admin', 'system_admin')" (click)="exportPDF()">
-              📄 Download PDF
+            <button class="btn btn-outline" *ngIf="auth.hasRole('camp_admin', 'system_admin')" (click)="exportCSV()" [disabled]="exporting">
+              {{ exporting ? 'Exporting...' : '📥 Export CSV' }}
             </button>
           </div>
         </div>
@@ -218,6 +215,7 @@ export class DashboardComponent implements OnInit {
     analytics: any = null;
     loading = false;
     treatmentKeys: string[] = [];
+    exporting = false;
 
     constructor(
         public auth: AuthService,
@@ -287,21 +285,35 @@ export class DashboardComponent implements OnInit {
     }
 
     exportCSV(): void {
+        this.exporting = true;
         this.api.generateExport(this.activeCampId, 'csv').subscribe({
             next: (res) => {
-                alert(`Export generated! ${res.record_count} records. Download URL: ${res.download_url}`);
+                // Download the generated file
+                const token = localStorage.getItem('dental_token');
+                const downloadUrl = `${this.api.baseUrl}${res.download_url.replace('/api', '')}`;
+                fetch(downloadUrl, { headers: { Authorization: `Bearer ${token}` } })
+                    .then(response => {
+                        if (!response.ok) throw new Error('Download failed');
+                        return response.blob();
+                    })
+                    .then(blob => {
+                        const blobUrl = window.URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = blobUrl;
+                        a.download = `camp_export_${res.record_count}_records.csv`;
+                        a.click();
+                        window.URL.revokeObjectURL(blobUrl);
+                        this.exporting = false;
+                    })
+                    .catch(() => {
+                        alert('Download failed. Please try again.');
+                        this.exporting = false;
+                    });
             },
-            error: (err) => alert('Export failed: ' + (err.error?.error || 'Unknown error'))
-        });
-    }
-
-    exportPDF(): void {
-        this.api.generateExport(this.activeCampId, 'pdf').subscribe({
-            next: (res) => {
-                alert(`PDF Export generated! Download URL: ${res.download_url}`);
-                window.open(res.download_url, '_blank');
-            },
-            error: (err) => alert('PDF Export failed: ' + (err.error?.error || 'Unknown error. Check backend support.'))
+            error: (err) => {
+                this.exporting = false;
+                alert('Export failed: ' + (err.error?.error || 'Unknown error'));
+            }
         });
     }
 

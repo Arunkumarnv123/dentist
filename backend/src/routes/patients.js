@@ -18,7 +18,7 @@ router.post('/:campId/register',
         body('full_name').trim().notEmpty().withMessage('Full name required'),
         body('age').isInt({ min: 0, max: 120 }).withMessage('Age must be 0-120'),
         body('gender').isIn(['male', 'female', 'other']).withMessage('Gender must be male, female, or other'),
-        body('phone').optional({ nullable: true, checkFalsy: true }).trim(),
+        body('phone').optional({ nullable: true, checkFalsy: true }).trim().matches(/^[0-9]{10}$/).withMessage('Phone must be exactly 10 digits'),
         body('address').optional({ nullable: true }).trim(),
         body('city').optional({ nullable: true }).trim(),
         body('idempotency_key').optional().trim(),
@@ -38,7 +38,7 @@ router.post('/:campId/register',
                 return res.status(400).json({ error: 'Camp is not active', code: 'CAMP_INACTIVE' });
             }
 
-            const { full_name, age, gender, phone, address, city, idempotency_key, priority } = req.body;
+            const { full_name, age, gender, phone, address, city, organization, department, idempotency_key, priority } = req.body;
 
             // Idempotency check — if same key already used, return existing patient
             if (idempotency_key) {
@@ -85,6 +85,8 @@ router.post('/:campId/register',
                 phone: phone || null,
                 address: address || null,
                 city: city || null,
+                organization: organization || null,
+                department: department || null,
                 idempotency_key: idempotency_key || null,
                 registered_at: new Date(),
             });

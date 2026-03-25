@@ -52,7 +52,9 @@ router.get('/download/:fileName',
     rbac('camp_admin', 'system_admin'),
     async (req, res) => {
         try {
-            const filePath = path.join(EXPORTS_DIR, req.params.fileName);
+            // Sanitize filename to prevent path traversal
+            const sanitizedName = path.basename(req.params.fileName);
+            const filePath = path.join(EXPORTS_DIR, sanitizedName);
             const fs = require('fs');
             if (!fs.existsSync(filePath)) {
                 return res.status(404).json({ error: 'Export file not found', code: 'NOT_FOUND' });

@@ -24,6 +24,9 @@ import { AuthService } from '../../services/auth.service';
             <label class="form-label">Password</label>
             <input type="password" class="form-control" [(ngModel)]="password" name="password"
                    placeholder="Enter password" required autocomplete="current-password">
+            <div class="forgot-link">
+              <a routerLink="/forgot-password">Forgot Password?</a>
+            </div>
           </div>
 
           <div *ngIf="error" class="error-msg">{{ error }}</div>
@@ -32,26 +35,6 @@ import { AuthService } from '../../services/auth.service';
             {{ loading ? 'Signing in...' : 'Sign In' }}
           </button>
         </form>
-
-        <div class="demo-credentials">
-          <p class="demo-title">Demo Accounts:</p>
-          <div class="demo-row" (click)="fillCredentials('admin@gmail.com', 'admin')">
-            <span class="badge badge-danger">Admin</span>
-            <span>admin@gmail.com</span>
-          </div>
-          <div class="demo-row" (click)="fillCredentials('dentist@gmail.com', 'dentist')">
-            <span class="badge badge-primary">Dentist</span>
-            <span>dentist@gmail.com</span>
-          </div>
-          <div class="demo-row" (click)="fillCredentials('campadmin@dental.com', 'admin123')">
-            <span class="badge badge-info">Camp Admin</span>
-            <span>campadmin@dental.com</span>
-          </div>
-          <div class="demo-row" (click)="fillCredentials('patient@dental.com', 'patient123')">
-            <span class="badge badge-success">Patient</span>
-            <span>patient@dental.com</span>
-          </div>
-        </div>
 
         <div class="register-link">
           <p>Are you a patient? <a routerLink="/patient-register">Register here</a></p>
@@ -109,35 +92,21 @@ import { AuthService } from '../../services/auth.service';
       margin-bottom: 1rem;
       text-align: center;
     }
-    .demo-credentials {
-      margin-top: 1.75rem;
-      padding-top: 1.25rem;
-      border-top: 1px solid var(--border);
+    .forgot-link {
+      text-align: right;
+      margin-top: 0.4rem;
     }
-    .demo-title {
+    .forgot-link a {
+      color: #14b8a6;
       font-size: 0.8rem;
-      color: var(--text-muted);
-      margin-bottom: 0.75rem;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
+      text-decoration: none;
+      font-weight: 500;
     }
-    .demo-row {
-      display: flex;
-      align-items: center;
-      gap: 0.75rem;
-      padding: 0.5rem 0.75rem;
-      border-radius: 8px;
-      cursor: pointer;
-      transition: all 0.2s ease;
-      font-size: 0.85rem;
-      color: var(--text-secondary);
-    }
-    .demo-row:hover {
-      background: rgba(13, 148, 136, 0.1);
-      color: var(--text-primary);
+    .forgot-link a:hover {
+      text-decoration: underline;
     }
     .register-link {
-      margin-top: 1.25rem;
+      margin-top: 1.5rem;
       text-align: center;
       padding-top: 1rem;
       border-top: 1px solid var(--border);
@@ -154,10 +123,6 @@ import { AuthService } from '../../services/auth.service';
     .register-link a:hover {
       text-decoration: underline;
     }
-    .badge-success {
-      background: rgba(16, 185, 129, 0.2);
-      color: #34d399;
-    }
   `]
 })
 export class LoginComponent {
@@ -171,11 +136,6 @@ export class LoginComponent {
       const dest = auth.currentUser?.role === 'patient' ? '/patient-portal' : '/dashboard';
       this.router.navigate([dest]);
     }
-  }
-
-  fillCredentials(email: string, password: string): void {
-    this.email = email;
-    this.password = password;
   }
 
   login(): void {

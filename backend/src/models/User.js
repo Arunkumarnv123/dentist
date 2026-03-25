@@ -24,8 +24,11 @@ const User = sequelize.define('User', {
         allowNull: false,
     },
     phone: {
-        type: DataTypes.STRING(20),
+        type: DataTypes.STRING(10),
         allowNull: true,
+        validate: {
+            is: /^[0-9]{10}$/,
+        },
     },
     role: {
         type: DataTypes.ENUM('dentist', 'camp_admin', 'system_admin', 'auditor', 'patient'),
@@ -49,6 +52,14 @@ const User = sequelize.define('User', {
         defaultValue: true,
     },
     last_login: {
+        type: DataTypes.DATE,
+        allowNull: true,
+    },
+    reset_otp: {
+        type: DataTypes.STRING(6),
+        allowNull: true,
+    },
+    reset_otp_expires: {
         type: DataTypes.DATE,
         allowNull: true,
     },

@@ -9,6 +9,7 @@ import { AdminComponent } from './pages/admin/admin.component';
 import { CampsComponent } from './pages/camps/camps.component';
 import { PatientRegisterComponent } from './pages/patient-register/patient-register.component';
 import { DentistRegisterComponent } from './pages/dentist-register/dentist-register.component';
+import { ForgotPasswordComponent } from './pages/forgot-password/forgot-password.component';
 import { BookAppointmentComponent } from './pages/book-appointment/book-appointment.component';
 import { PatientPortalComponent } from './pages/patient-portal/patient-portal.component';
 
@@ -19,6 +20,7 @@ const routes: Routes = [
   { path: 'login', component: LoginComponent },
   { path: 'patient-register', component: PatientRegisterComponent },
   { path: 'dentist-register', component: DentistRegisterComponent },
+  { path: 'forgot-password', component: ForgotPasswordComponent },
   { path: 'register/:campId', component: RegisterComponent },
   { path: 'status/:campId/:patientId', component: PatientStatusComponent },
   { path: 'dashboard', component: DashboardComponent },

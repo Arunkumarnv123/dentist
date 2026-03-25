@@ -86,6 +86,27 @@ export class ApiService {
         return this.http.get(`${this.baseUrl}/reports/${reportId}`);
     }
 
+    // ── Auth ──
+    refreshToken(): Observable<any> {
+        return this.http.post(`${this.baseUrl}/auth/refresh`, {});
+    }
+
+    forgotPassword(email: string): Observable<any> {
+        return this.http.post(`${this.baseUrl}/auth/forgot-password`, { email });
+    }
+
+    verifyOtp(email: string, otp: string): Observable<any> {
+        return this.http.post(`${this.baseUrl}/auth/verify-otp`, { email, otp });
+    }
+
+    resetPassword(email: string, otp: string, newPassword: string): Observable<any> {
+        return this.http.post(`${this.baseUrl}/auth/reset-password`, { email, otp, newPassword });
+    }
+
+    socialLogin(provider: string, token: string): Observable<any> {
+        return this.http.post(`${this.baseUrl}/auth/social-login`, { provider, token });
+    }
+
     downloadReport(reportId: string): Observable<Blob> {
         return this.http.get(`${this.baseUrl}/reports/${reportId}/download`, { responseType: 'blob' });
     }

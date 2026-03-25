@@ -30,8 +30,20 @@ app.use(helmet({
 }));
 app.use(cors({
     origin: function (origin, callback) {
-        // Allow any origin for testing purposes while in development/MVP
-        callback(null, true);
+        // Allow requests with no origin (e.g., mobile apps, curl, server-to-server)
+        if (!origin) return callback(null, true);
+
+        const allowedOrigins = [
+            'http://localhost:4200',
+            process.env.CORS_ORIGIN,
+            process.env.FRONTEND_URL,
+        ].filter(Boolean);
+
+        if (allowedOrigins.includes(origin)) {
+            callback(null, true);
+        } else {
+            callback(new Error('CORS: Origin not allowed'));
+        }
     },
     credentials: true,
 }));
@@ -93,9 +105,10 @@ app.use((err, req, res, next) => {
 
 // ── Database sync and start server ──
 async function startServer() {
+
     try {
-        // Sync database (creates tables if they don't exist)
-        await sequelize.sync();
+        // Sync database — alter:true adds any new columns without dropping data
+        await sequelize.sync({ alter: true });
         console.log(`🔌 Connected to database: ${sequelize.config.database}`);
 
         app.listen(PORT, () => {

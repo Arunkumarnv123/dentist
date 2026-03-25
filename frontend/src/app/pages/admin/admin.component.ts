@@ -58,7 +58,7 @@ import { AuthService } from '../../services/auth.service';
               <div class="form-group">
                 <label class="form-label">Phone</label>
                 <input type="tel" class="form-control" [(ngModel)]="userForm.phone" name="phone"
-                       placeholder="+91 9876543210">
+                       placeholder="10-digit number" maxlength="10">
               </div>
               <div class="form-group" *ngIf="editingUser">
                 <label class="form-label">Status</label>
@@ -217,6 +217,13 @@ export class AdminComponent implements OnInit {
 
         this.formError = '';
         this.saving = true;
+
+        // Phone validation
+        if (this.userForm.phone && !/^[0-9]{10}$/.test(this.userForm.phone)) {
+            this.formError = 'Please enter a valid 10-digit phone number (digits only).';
+            this.saving = false;
+            return;
+        }
 
         if (this.editingUser) {
             const updateData: any = {

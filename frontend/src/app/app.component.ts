@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { Router } from '@angular/router';
 import { AuthService } from './services/auth.service';
 
@@ -41,12 +41,28 @@ import { AuthService } from './services/auth.service';
     :host { display: block; min-height: 100vh; }
   `]
 })
-export class AppComponent {
+export class AppComponent implements OnInit, OnDestroy {
   activeCampId: string | null = null;
+  private expiryCheckInterval: any;
 
   constructor(public auth: AuthService, private router: Router) {
     const stored = localStorage.getItem('dental_active_camp');
     if (stored) this.activeCampId = stored;
+  }
+
+  ngOnInit(): void {
+    // Periodic token expiry check every 60 seconds
+    this.expiryCheckInterval = setInterval(() => {
+      if (this.auth.token && this.auth.isTokenExpired()) {
+        this.auth.logoutAndRedirect();
+      }
+    }, 60000);
+  }
+
+  ngOnDestroy(): void {
+    if (this.expiryCheckInterval) {
+      clearInterval(this.expiryCheckInterval);
+    }
   }
 
   get isPatient(): boolean {

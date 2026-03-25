@@ -62,7 +62,8 @@ import { ApiService } from '../../services/api.service';
           <div class="form-group">
             <label class="form-label">Phone Number</label>
             <input type="tel" class="form-control" formControlName="phone"
-                   placeholder="+91 9876543210">
+                   placeholder="10-digit number" maxlength="10" [class.error]="isInvalid('phone')">
+            <div class="form-error" *ngIf="isInvalid('phone')">Enter a valid 10-digit phone number (digits only)</div>
           </div>
 
           <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
@@ -75,6 +76,19 @@ import { ApiService } from '../../services/api.service';
               <label class="form-label">City</label>
               <input type="text" class="form-control" formControlName="city"
                      placeholder="Mumbai, Delhi...">
+            </div>
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+            <div class="form-group">
+              <label class="form-label">Organization</label>
+              <input type="text" class="form-control" formControlName="organization"
+                     placeholder="Company / School">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Department</label>
+              <input type="text" class="form-control" formControlName="department"
+                     placeholder="Unit / Section">
             </div>
           </div>
 
@@ -193,9 +207,11 @@ export class RegisterComponent implements OnInit {
       full_name: ['', [Validators.required, Validators.minLength(2)]],
       age: ['', [Validators.required, Validators.min(0), Validators.max(120)]],
       gender: ['', Validators.required],
-      phone: [''],
+      phone: ['', [Validators.pattern('^[0-9]{10}$')]],
       address: [''],
       city: [''],
+      organization: [''],
+      department: [''],
       priority: ['normal'],
       idempotency_key: [this.generateKey()],
     });

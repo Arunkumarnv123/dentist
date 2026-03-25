@@ -12,8 +12,6 @@ const rbac = (...allowedRoles) => {
             return res.status(403).json({
                 error: 'Insufficient permissions',
                 code: 'FORBIDDEN',
-                required: allowedRoles,
-                current: req.user.role,
             });
         }
 

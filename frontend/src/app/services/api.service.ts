@@ -171,4 +171,21 @@ export class ApiService {
     getSchedules(campId: string): Observable<any> {
         return this.http.get(`${this.baseUrl}/schedules/${campId}`);
     }
+
+    // ── Forgot Password ──
+    searchAccount(identifier: string): Observable<any> {
+        return this.http.get(`${this.baseUrl}/auth/search-account`, { params: { identifier } });
+    }
+
+    requestResetOtp(userId: string): Observable<any> {
+        return this.http.post(`${this.baseUrl}/auth/forgot-password`, { userId });
+    }
+
+    verifyResetOtp(userId: string, otp: string): Observable<any> {
+        return this.http.post(`${this.baseUrl}/auth/verify-otp`, { userId, otp });
+    }
+
+    resetPassword(data: any): Observable<any> {
+        return this.http.post(`${this.baseUrl}/auth/reset-password`, data);
+    }
 }

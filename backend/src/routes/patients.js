@@ -1,12 +1,13 @@
 const express = require('express');
-const { body, query } = require('express-validator');
+const { body } = require('express-validator');
 const { Op } = require('sequelize');
-const { Patient, QueueEntry, Camp, Screening, Report } = require('../models');
+const { Patient, QueueEntry, Camp, Screening, Report, User } = require('../models');
 const { authenticate, optionalAuth } = require('../middleware/auth');
 const { validate } = require('../middleware/validate');
 const { registrationLimiter } = require('../middleware/rateLimiter');
 const { generatePatientId } = require('../services/patientIdService');
 const { createAuditEntry } = require('../middleware/auditLogger');
+const { generatePDF } = require('../services/pdfService');
 
 const router = express.Router();
 
@@ -18,7 +19,7 @@ router.post('/:campId/register',
         body('full_name').trim().notEmpty().withMessage('Full name required'),
         body('age').isInt({ min: 0, max: 120 }).withMessage('Age must be 0-120'),
         body('gender').isIn(['male', 'female', 'other']).withMessage('Gender must be male, female, or other'),
-        body('phone').optional({ nullable: true, checkFalsy: true }).trim(),
+        body('phone').optional({ nullable: true, checkFalsy: true }).trim().matches(/^[0-9]{10}$/).withMessage('Phone must be exactly 10 digits'),
         body('address').optional({ nullable: true }).trim(),
         body('city').optional({ nullable: true }).trim(),
         body('idempotency_key').optional().trim(),
@@ -255,22 +256,51 @@ router.get('/:campId/status/:patientId', async (req, res) => {
 });
 
 // GET /api/camps/:campId/patients/:patientId/report/download — download latest report
+// If the PDF file is missing on disk (common on ephemeral storage like Render),
+// regenerate the PDF on the fly before serving it.
 router.get('/:campId/patients/:patientId/report/download',
     authenticate,
     async (req, res) => {
         try {
             const report = await Report.findOne({
-                where: { patient_id: req.params.patientId, camp_id: req.params.campId, status: 'completed' },
+                where: { patient_id: req.params.patientId, camp_id: req.params.campId },
                 order: [['createdAt', 'DESC']],
             });
 
-            if (!report || !report.pdf_path) {
-                return res.status(404).json({ error: 'Report not found or not ready', code: 'NOT_FOUND' });
+            if (!report) {
+                return res.status(404).json({ error: 'Report not found', code: 'NOT_FOUND' });
             }
 
             const fs = require('fs');
-            if (!fs.existsSync(report.pdf_path)) {
-                return res.status(404).json({ error: 'PDF file not found', code: 'FILE_NOT_FOUND' });
+            const path = require('path');
+
+            // If the PDF file is missing, regenerate it on demand
+            if (!report.pdf_path || !fs.existsSync(report.pdf_path)) {
+                try {
+                    const screening = await Screening.findByPk(report.screening_id);
+                    const patient = await Patient.findByPk(report.patient_id);
+                    const dentist = await User.findByPk(screening.dentist_id);
+                    const camp = await Camp.findByPk(report.camp_id);
+
+                    if (!screening || !patient || !dentist || !camp) {
+                        return res.status(404).json({ error: 'Missing data for PDF regeneration', code: 'DATA_MISSING' });
+                    }
+
+                    const pdfPath = await generatePDF({
+                        patient, screening, camp, dentist,
+                        reportId: report.id,
+                        version: report.version,
+                    });
+
+                    await report.update({
+                        pdf_path: pdfPath,
+                        status: 'completed',
+                        generated_at: new Date(),
+                    });
+                } catch (pdfError) {
+                    console.error('PDF regeneration on download failed:', pdfError);
+                    return res.status(500).json({ error: 'Failed to generate PDF', code: 'PDF_GENERATION_FAILED' });
+                }
             }
 
             await createAuditEntry({
@@ -281,7 +311,6 @@ router.get('/:campId/patients/:patientId/report/download',
                 ipAddress: req.ip,
             });
 
-            const path = require('path');
             const fileName = path.basename(report.pdf_path);
             res.download(report.pdf_path, fileName);
         } catch (error) {

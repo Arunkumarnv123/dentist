@@ -1,5 +1,5 @@
 const express = require('express');
-const { body, param, query } = require('express-validator');
+const { body } = require('express-validator');
 const { Appointment, Patient, User, Camp, DoctorSchedule } = require('../models');
 const { authenticate } = require('../middleware/auth');
 const { rbac } = require('../middleware/rbac');

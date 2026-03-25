@@ -1,8 +1,6 @@
 const PDFDocument = require('pdfkit');
-const QRCode = require('qrcode');
 const fs = require('fs');
 const path = require('path');
-require('dotenv').config();
 
 const REPORTS_DIR = path.resolve(process.env.REPORTS_DIR || './reports');
 
@@ -18,11 +16,6 @@ if (!fs.existsSync(REPORTS_DIR)) {
 async function generatePDF({ patient, screening, camp, dentist, reportId, version }) {
     const fileName = `report_${patient.patient_id}_v${version}_${Date.now()}.pdf`;
     const filePath = path.join(REPORTS_DIR, fileName);
-
-    // Generate QR code as data URL
-    const reportUrl = `${process.env.CORS_ORIGIN || 'http://localhost:4200'}/reports/${reportId}`;
-    const qrDataUrl = await QRCode.toDataURL(reportUrl, { width: 120, margin: 1 });
-    const qrBuffer = Buffer.from(qrDataUrl.split(',')[1], 'base64');
 
     return new Promise((resolve, reject) => {
         try {
@@ -62,9 +55,8 @@ async function generatePDF({ patient, screening, camp, dentist, reportId, versio
 
             const rightCol = [
                 ['Phone', patient.phone || 'N/A'],
-                ['Organization', patient.organization],
-                ['Department', patient.department || 'N/A'],
-                ['Aadhaar No.', patient.aadhaar_number || 'N/A'],
+                ['Address', patient.address || 'N/A'],
+                ['City', patient.city || 'N/A'],
             ];
 
             let y = infoStartY;
@@ -93,15 +85,15 @@ async function generatePDF({ patient, screening, camp, dentist, reportId, versio
 
             const screeningDate = new Date(screening.updatedAt || screening.createdAt);
             doc.fontSize(10).font('Helvetica')
-                .text(`Date of Screening: ${screeningDate.toISOString().split('T')[0]} (${screeningDate.toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })})`);
+                .text(`Date of Screening: ${screeningDate.toISOString().split('T')[0]}`);
             doc.moveDown(0.5);
 
             // Findings table
             const findings = [
                 ['Oral Hygiene', (screening.oral_hygiene || 'N/A').charAt(0).toUpperCase() + (screening.oral_hygiene || 'N/A').slice(1)],
-                ['Dental Caries', screening.caries ? '⚠ Yes' : '✓ No'],
-                ['Gingivitis', screening.gingivitis ? '⚠ Yes' : '✓ No'],
-                ['Malocclusion', screening.malocclusion ? '⚠ Yes' : '✓ No'],
+                ['Dental Caries', screening.caries ? 'Yes' : 'No'],
+                ['Gingivitis', screening.gingivitis ? 'Yes' : 'No'],
+                ['Malocclusion', screening.malocclusion ? 'Yes' : 'No'],
             ];
 
             const tableTop = doc.y;
@@ -155,9 +147,8 @@ async function generatePDF({ patient, screening, camp, dentist, reportId, versio
             }
             doc.moveDown(1);
 
-            // ── QR Code and Dentist Info ──
+            // ── Dentist Info ──
             const bottomY = doc.y;
-            doc.image(qrBuffer, 460, bottomY, { width: 80 });
 
             doc.fontSize(10).font('Helvetica-Bold').text('Screened By:', 50, bottomY);
             doc.font('Helvetica').text(dentist.name);

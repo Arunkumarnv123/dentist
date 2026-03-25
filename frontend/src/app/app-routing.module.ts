@@ -11,6 +11,7 @@ import { PatientRegisterComponent } from './pages/patient-register/patient-regis
 import { DentistRegisterComponent } from './pages/dentist-register/dentist-register.component';
 import { BookAppointmentComponent } from './pages/book-appointment/book-appointment.component';
 import { PatientPortalComponent } from './pages/patient-portal/patient-portal.component';
+import { ForgotComponent } from './pages/forgot/forgot.component';
 
 import { PatientStatusComponent } from './pages/patient-status/patient-status.component';
 
@@ -19,6 +20,7 @@ const routes: Routes = [
   { path: 'login', component: LoginComponent },
   { path: 'patient-register', component: PatientRegisterComponent },
   { path: 'dentist-register', component: DentistRegisterComponent },
+  { path: 'forgot', component: ForgotComponent },
   { path: 'register/:campId', component: RegisterComponent },
   { path: 'status/:campId/:patientId', component: PatientStatusComponent },
   { path: 'dashboard', component: DashboardComponent },

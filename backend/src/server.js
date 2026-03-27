@@ -57,7 +57,11 @@ app.get('/health', (req, res) => {
 app.get('/health/ready', async (req, res) => {
     try {
         await sequelize.authenticate();
-        res.json({ status: 'ready', database: 'connected' });
+        res.json({ 
+            status: 'ready', 
+            database: 'connected',
+            type: sequelize.getDialect() === 'postgres' ? 'remote' : 'local'
+        });
     } catch (error) {
         res.status(503).json({ status: 'not ready', database: 'disconnected', error: error.message });
     }
@@ -96,7 +100,8 @@ async function startServer() {
     try {
         // Sync database (creates tables if they don't exist)
         await sequelize.sync();
-        console.log(`🔌 Connected to database: ${sequelize.config.database}`);
+        const dbType = sequelize.getDialect() === 'postgres' ? 'Remote (Postgres)' : 'Local (SQLite)';
+        console.log(`🔌 Connected to ${dbType} database: ${sequelize.config.database || 'database.sqlite'}`);
 
         app.listen(PORT, () => {
             console.log(`🦷 Dental Camp API Server running on http://localhost:${PORT}`);

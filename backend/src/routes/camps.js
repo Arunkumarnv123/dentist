@@ -12,15 +12,35 @@ const router = express.Router();
 router.get('/', authenticate, async (req, res) => {
     try {
         let camps;
-        if (req.user.role === 'system_admin' || req.user.role === 'patient') {
-            // Admins and patients see all camps
+        const role = req.userRole || req.user?.role;
+
+        if (role === 'system_admin' || role === 'camp_admin') {
+            // Admins see ALL camps including deactivated ones (so they can manage)
             camps = await Camp.findAll({ order: [['start_date', 'DESC']] });
-        } else {
-            const campIds = req.user.camp_ids || [];
+        } else if (role === 'patient') {
+            // Patients see only active camps
             camps = await Camp.findAll({
-                where: { id: campIds },
-                order: [['start_date', 'DESC']],
+                where: { status: 'active' },
+                order: [['start_date', 'DESC']]
             });
+        } else if (req.user) {
+            // Dentists: only active camps they are assigned to
+            // If no camps assigned yet, show all active camps
+            const campIds = req.user.camp_ids || [];
+            const { Op } = require('sequelize');
+            if (campIds.length === 0) {
+                camps = await Camp.findAll({
+                    where: { status: 'active' },
+                    order: [['start_date', 'DESC']],
+                });
+            } else {
+                camps = await Camp.findAll({
+                    where: { id: campIds, status: 'active' },
+                    order: [['start_date', 'DESC']],
+                });
+            }
+        } else {
+            camps = [];
         }
         res.json({ camps });
     } catch (error) {
@@ -46,7 +66,7 @@ router.get('/:campId', async (req, res) => {
 // POST /api/camps — create camp
 router.post('/',
     authenticate,
-    rbac('camp_admin', 'system_admin'),
+    rbac('dentist', 'camp_admin', 'system_admin'),
     auditMiddleware('camp.create', 'Camp'),
     [
         body('name').trim().notEmpty().withMessage('Camp name required'),
@@ -87,7 +107,7 @@ router.post('/',
 // PUT /api/camps/:campId — update camp
 router.put('/:campId',
     authenticate,
-    rbac('camp_admin', 'system_admin'),
+    rbac('dentist', 'camp_admin', 'system_admin'),
     auditMiddleware('camp.update', 'Camp'),
     async (req, res) => {
         try {
@@ -110,6 +130,72 @@ router.put('/:campId',
             res.json({ camp });
         } catch (error) {
             console.error('Update camp error:', error);
+            res.status(500).json({ error: 'Internal server error', code: 'SERVER_ERROR' });
+        }
+    }
+);
+
+// PUT /api/camps/:campId/deactivate — deactivate camp (admin only)
+router.put('/:campId/deactivate',
+    authenticate,
+    rbac('camp_admin', 'system_admin'),
+    async (req, res) => {
+        try {
+            const camp = await Camp.findByPk(req.params.campId);
+            if (!camp) {
+                return res.status(404).json({ error: 'Camp not found', code: 'NOT_FOUND' });
+            }
+            if (camp.status === 'cancelled') {
+                return res.status(400).json({ error: 'Camp is already deactivated', code: 'ALREADY_INACTIVE' });
+            }
+            await camp.update({ status: 'cancelled' });
+            res.json({ camp, message: 'Camp deactivated successfully' });
+        } catch (error) {
+            console.error('Deactivate camp error:', error);
+            res.status(500).json({ error: 'Internal server error', code: 'SERVER_ERROR' });
+        }
+    }
+);
+
+// PUT /api/camps/:campId/reactivate — reactivate a deactivated camp (admin only)
+router.put('/:campId/reactivate',
+    authenticate,
+    rbac('camp_admin', 'system_admin'),
+    async (req, res) => {
+        try {
+            const camp = await Camp.findByPk(req.params.campId);
+            if (!camp) {
+                return res.status(404).json({ error: 'Camp not found', code: 'NOT_FOUND' });
+            }
+            await camp.update({ status: 'active' });
+            res.json({ camp, message: 'Camp reactivated successfully' });
+        } catch (error) {
+            console.error('Reactivate camp error:', error);
+            res.status(500).json({ error: 'Internal server error', code: 'SERVER_ERROR' });
+        }
+    }
+);
+
+// DELETE /api/camps/:campId — permanently delete a camp (system_admin only, must be deactivated first)
+router.delete('/:campId',
+    authenticate,
+    rbac('system_admin'),
+    async (req, res) => {
+        try {
+            const camp = await Camp.findByPk(req.params.campId);
+            if (!camp) {
+                return res.status(404).json({ error: 'Camp not found', code: 'NOT_FOUND' });
+            }
+            if (camp.status === 'active') {
+                return res.status(400).json({
+                    error: 'Camp must be deactivated before it can be deleted. Deactivate it first.',
+                    code: 'CAMP_STILL_ACTIVE'
+                });
+            }
+            await camp.destroy();
+            res.json({ message: 'Camp permanently deleted' });
+        } catch (error) {
+            console.error('Delete camp error:', error);
             res.status(500).json({ error: 'Internal server error', code: 'SERVER_ERROR' });
         }
     }

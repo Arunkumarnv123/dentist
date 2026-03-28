@@ -132,11 +132,12 @@ import { AuthService } from '../../services/auth.service';
                       🔓 Unlock
                     </button>
 
-                    <!-- View PDF -->
+                    <!-- Download PDF -->
                     <button class="btn btn-outline btn-sm"
                             *ngIf="entry.status === 'screened'"
-                            (click)="viewPDF(entry)">
-                      📄 View PDF
+                            (click)="downloadPDF(entry)"
+                            [disabled]="downloadingId === entry.patient_id">
+                      {{ downloadingId === entry.patient_id ? '⏳ Downloading...' : '⬇️ Download PDF' }}
                     </button>
                   </div>
                 </td>
@@ -206,6 +207,7 @@ export class QueueComponent implements OnInit, OnDestroy {
     allQueue: any[] = [];
     loading = false;
     locking = false;
+    downloadingId = '';
     statusFilter = '';
     autoRefresh = true;
     refreshInterval: any;
@@ -314,22 +316,27 @@ export class QueueComponent implements OnInit, OnDestroy {
         });
     }
 
-    viewPDF(entry: any): void {
-        const token = localStorage.getItem('dental_token');
-        const url = `${this.api.baseUrl}/camps/${this.campId}/patients/${entry.patient_id}/report/download`;
-        
-        fetch(url, { headers: { Authorization: `Bearer ${token}` } })
-            .then(response => {
-                if (!response.ok) throw new Error('Report not available');
-                return response.blob();
-            })
-            .then(blob => {
-                const blobUrl = window.URL.createObjectURL(blob);
-                window.open(blobUrl, '_blank');
-            })
-            .catch(err => {
-                this.showToast(err.message || 'Failed to open PDF', 'toast-error');
-            });
+    downloadPDF(entry: any): void {
+        this.downloadingId = entry.patient_id;
+        this.api.downloadPatientReport(this.campId, entry.patient_id).subscribe({
+            next: (blob) => {
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `report_${entry.patient?.patient_id || entry.patient_id}.pdf`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                window.URL.revokeObjectURL(url);
+                this.downloadingId = '';
+                this.showToast('PDF downloaded successfully', 'toast-success');
+            },
+            error: (err) => {
+                this.downloadingId = '';
+                const msg = err.error?.error || 'Report not available. It may still be generating.';
+                this.showToast(msg, 'toast-error');
+            }
+        });
     }
 
     openRegistration(): void {

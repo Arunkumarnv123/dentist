@@ -14,7 +14,7 @@ import { AuthService } from '../../services/auth.service';
             <p class="page-subtitle">Create and manage dental screening camps</p>
           </div>
           <button class="btn btn-primary" (click)="showCreateForm = !showCreateForm"
-                  *ngIf="auth.hasRole('camp_admin', 'system_admin')">
+                  *ngIf="auth.hasRole('dentist', 'camp_admin', 'system_admin')">
             {{ showCreateForm ? '✕ Cancel' : '➕ New Camp' }}
           </button>
         </div>
@@ -96,7 +96,9 @@ import { AuthService } from '../../services/auth.service';
                 'badge-success': camp.status === 'active',
                 'badge-warning': camp.status === 'completed',
                 'badge-danger': camp.status === 'cancelled'
-              }">{{ camp.status }}</span>
+              }">
+                {{ camp.status === 'cancelled' ? 'Inactive' : camp.status }}
+              </span>
             </div>
 
             <div class="camp-details">
@@ -131,17 +133,37 @@ import { AuthService } from '../../services/auth.service';
               <button class="btn btn-outline btn-sm" (click)="copyRegLink(camp.id)">
                 🔗 Copy Link
               </button>
+              <!-- Admin: Deactivate / Reactivate -->
+              <button class="btn btn-warning btn-sm" (click)="deactivateCamp(camp)"
+                      *ngIf="auth.hasRole('camp_admin', 'system_admin') && camp.status === 'active'">
+                🚫 Deactivate
+              </button>
+              <button class="btn btn-success btn-sm" (click)="reactivateCamp(camp)"
+                      *ngIf="auth.hasRole('camp_admin', 'system_admin') && camp.status === 'cancelled'">
+                ✅ Reactivate
+              </button>
+              <!-- Admin: Delete (only when already deactivated) -->
+              <button class="btn btn-danger btn-sm" (click)="confirmDelete(camp)"
+                      *ngIf="auth.hasRole('system_admin') && camp.status !== 'active'">
+                🗑️ Delete
+              </button>
               <button class="btn btn-outline btn-sm" (click)="editCamp(camp)"
-                      *ngIf="auth.hasRole('camp_admin', 'system_admin')">
+                      *ngIf="auth.hasRole('dentist', 'camp_admin', 'system_admin') && camp.status === 'active'">
                 ✏️ Edit
               </button>
             </div>
           </div>
         </div>
 
+        <!-- Deactivated camps banner (admin view) -->
+        <div *ngIf="!loading && deactivatedCount > 0 && auth.hasRole('camp_admin', 'system_admin')"
+             class="deactivated-banner">
+          🚫 {{ deactivatedCount }} deactivated camp{{ deactivatedCount > 1 ? 's' : '' }} — not visible to dentists
+        </div>
+
         <!-- Empty State -->
         <div *ngIf="!loading && camps.length === 0" class="card" style="text-align: center; padding: 3rem;">
-          <ng-container *ngIf="auth.hasRole('camp_admin', 'system_admin'); else noCamps">
+          <ng-container *ngIf="auth.hasRole('dentist', 'camp_admin', 'system_admin'); else noCamps">
             <h2>No Camps Yet</h2>
             <p style="color: var(--text-secondary); margin: 1rem 0;">Create your first dental screening camp to get started.</p>
             <button class="btn btn-primary btn-lg" (click)="showCreateForm = true">🏕️ Create Your First Camp</button>
@@ -174,6 +196,23 @@ import { AuthService } from '../../services/auth.service';
 
         <!-- Toast -->
         <div class="toast toast-success" *ngIf="toast" @fadeIn>{{ toast }}</div>
+
+        <!-- Delete Confirmation Modal -->
+        <div class="modal-overlay" *ngIf="campToDelete" (click)="campToDelete = null">
+          <div class="confirm-modal" (click)="$event.stopPropagation()">
+            <div class="confirm-icon">🗑️</div>
+            <h3>Delete Camp?</h3>
+            <p>You are about to <strong>permanently delete</strong>:</p>
+            <p class="camp-name-highlight">{{ campToDelete.name }}</p>
+            <p class="confirm-warning">This action cannot be undone. All associated data may be affected.</p>
+            <div class="confirm-actions">
+              <button class="btn btn-danger" (click)="deleteCamp()" [disabled]="saving">
+                {{ saving ? 'Deleting...' : 'Yes, Delete Permanently' }}
+              </button>
+              <button class="btn btn-outline" (click)="campToDelete = null">Cancel</button>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   `,
@@ -327,6 +366,76 @@ import { AuthService } from '../../services/auth.service';
       to { opacity: 1; }
     }
 
+    /* Deactivated card style */
+    .camp-card:has(.badge-danger) {
+      opacity: 0.7;
+      border-left: 3px solid var(--coral, #ef4444);
+    }
+
+    /* Deactivated banner */
+    .deactivated-banner {
+      background: rgba(239, 68, 68, 0.1);
+      border: 1px solid rgba(239, 68, 68, 0.3);
+      border-radius: 10px;
+      padding: 0.75rem 1.25rem;
+      color: #f87171;
+      font-size: 0.87rem;
+      margin-top: 0.5rem;
+      margin-bottom: 1rem;
+    }
+
+    /* Extra button variants */
+    .btn-warning {
+      background: linear-gradient(135deg, #f59e0b, #d97706);
+      color: #000;
+      border: none;
+    }
+    .btn-warning:hover { background: linear-gradient(135deg, #d97706, #b45309); }
+    .btn-danger {
+      background: linear-gradient(135deg, #ef4444, #dc2626);
+      color: #fff;
+      border: none;
+    }
+    .btn-danger:hover { background: linear-gradient(135deg, #dc2626, #b91c1c); }
+    .btn-success {
+      background: linear-gradient(135deg, #22c55e, #16a34a);
+      color: #fff;
+      border: none;
+    }
+    .btn-success:hover { background: linear-gradient(135deg, #16a34a, #15803d); }
+
+    /* Confirmation modal */
+    .modal-overlay {
+      position: fixed; inset: 0;
+      background: rgba(0, 0, 0, 0.75);
+      backdrop-filter: blur(8px);
+      z-index: 2000;
+      display: flex; align-items: center; justify-content: center;
+      padding: 1rem;
+      animation: fadeIn 0.2s ease;
+    }
+    .confirm-modal {
+      background: var(--bg-secondary);
+      border: 1px solid rgba(239, 68, 68, 0.4);
+      border-radius: 20px;
+      padding: 2rem;
+      max-width: 400px; width: 100%;
+      text-align: center;
+      box-shadow: 0 24px 80px rgba(0, 0, 0, 0.6);
+    }
+    .confirm-icon { font-size: 3rem; margin-bottom: 0.75rem; }
+    .confirm-modal h3 { font-size: 1.3rem; color: #f87171; margin-bottom: 0.5rem; }
+    .confirm-modal p { color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 0.35rem; }
+    .camp-name-highlight {
+      font-weight: 700; color: var(--text-primary) !important;
+      font-size: 1rem !important; padding: 0.3rem 0;
+    }
+    .confirm-warning {
+      color: #f87171 !important; font-size: 0.8rem !important;
+      margin-bottom: 1.25rem !important;
+    }
+    .confirm-actions { display: flex; gap: 0.75rem; justify-content: center; margin-top: 1rem; }
+
     @media (max-width: 768px) {
       .form-row { grid-template-columns: 1fr; }
       .camps-grid { grid-template-columns: 1fr; }
@@ -341,6 +450,7 @@ export class CampsComponent implements OnInit {
   saving = false;
   showCreateForm = false;
   editingCamp: any = null;
+  campToDelete: any = null;
   formError = '';
   toast = '';
   qrData: any = null;
@@ -351,6 +461,10 @@ export class CampsComponent implements OnInit {
     name: '', prefix: '', location: '', organization: '',
     start_date: '', end_date: '', contact_info: ''
   };
+
+  get deactivatedCount(): number {
+    return this.camps.filter(c => c.status === 'cancelled').length;
+  }
 
   constructor(
     public auth: AuthService,
@@ -420,6 +534,58 @@ export class CampsComponent implements OnInit {
       error: (err) => {
         this.saving = false;
         this.formError = err.error?.error || 'Failed to save camp.';
+      }
+    });
+  }
+
+  deactivateCamp(camp: any): void {
+    this.saving = true;
+    this.api.deactivateCamp(camp.id).subscribe({
+      next: () => {
+        this.saving = false;
+        camp.status = 'cancelled';
+        this.showToast(`"${camp.name}" deactivated — no longer visible to dentists`);
+      },
+      error: (err) => {
+        this.saving = false;
+        this.showToast(err.error?.error || 'Failed to deactivate camp');
+      }
+    });
+  }
+
+  reactivateCamp(camp: any): void {
+    this.saving = true;
+    this.api.reactivateCamp(camp.id).subscribe({
+      next: () => {
+        this.saving = false;
+        camp.status = 'active';
+        this.showToast(`"${camp.name}" reactivated`);
+      },
+      error: (err) => {
+        this.saving = false;
+        this.showToast(err.error?.error || 'Failed to reactivate camp');
+      }
+    });
+  }
+
+  confirmDelete(camp: any): void {
+    this.campToDelete = camp;
+  }
+
+  deleteCamp(): void {
+    if (!this.campToDelete) return;
+    this.saving = true;
+    this.api.deleteCamp(this.campToDelete.id).subscribe({
+      next: () => {
+        this.saving = false;
+        this.camps = this.camps.filter(c => c.id !== this.campToDelete.id);
+        this.showToast(`"${this.campToDelete.name}" permanently deleted`);
+        this.campToDelete = null;
+      },
+      error: (err) => {
+        this.saving = false;
+        this.showToast(err.error?.error || 'Failed to delete camp');
+        this.campToDelete = null;
       }
     });
   }

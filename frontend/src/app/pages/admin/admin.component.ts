@@ -57,8 +57,8 @@ import { AuthService } from '../../services/auth.service';
             <div class="form-row">
               <div class="form-group">
                 <label class="form-label">Phone</label>
-                <input type="tel" class="form-control" [(ngModel)]="userForm.phone" name="phone"
-                       placeholder="+91 9876543210">
+                <input appPhoneOnly class="form-control" [(ngModel)]="userForm.phone" name="phone"
+                       placeholder="10-digit mobile number">
               </div>
               <div class="form-group" *ngIf="editingUser">
                 <label class="form-label">Status</label>
@@ -214,6 +214,10 @@ export class AdminComponent implements OnInit {
             this.formError = 'Email and password are required for new users.';
             return;
         }
+        if (this.userForm.phone && !/^[0-9]{10}$/.test(this.userForm.phone)) {
+            this.formError = 'Phone must be exactly 10 digits.';
+            return;
+        }
 
         this.formError = '';
         this.saving = true;
@@ -293,6 +297,12 @@ export class AdminComponent implements OnInit {
         return new Date(dateStr).toLocaleDateString('en-IN', {
             day: 'numeric', month: 'short', year: 'numeric'
         });
+    }
+
+    sanitizePhone(): void {
+        if (this.userForm.phone) {
+            this.userForm.phone = this.userForm.phone.replace(/[^0-9]/g, '').slice(0, 10);
+        }
     }
 
     showToast(msg: string): void {

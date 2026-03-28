@@ -60,9 +60,20 @@ import { ApiService } from '../../services/api.service';
           </div>
 
           <div class="form-group">
-            <label class="form-label">Phone Number</label>
-            <input type="tel" class="form-control" formControlName="phone"
-                   placeholder="+91 9876543210">
+            <label class="form-label">Phone Number * <span style="font-weight:400; color: var(--text-muted); font-size:0.8rem;">(used to login and view report)</span></label>
+            <input appPhoneOnly class="form-control" formControlName="phone"
+                   placeholder="10-digit mobile number"
+                   [class.error]="isInvalid('phone')">
+            <div class="form-error" *ngIf="isInvalid('phone')">Valid 10-digit phone number required</div>
+          </div>
+
+          <div class="passkey-section">
+            <div class="passkey-info">🔑 Create a <strong>Passkey</strong> to login later and view your dental report</div>
+            <div class="form-group">
+              <label class="form-label">Passkey <span style="font-weight:400; color: var(--text-muted); font-size:0.8rem;">(optional, min 4 chars)</span></label>
+              <input type="password" class="form-control" formControlName="passkey"
+                     placeholder="E.g. John1234" maxlength="20">
+            </div>
           </div>
 
           <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
@@ -150,6 +161,16 @@ import { ApiService } from '../../services/api.service';
       font-size: 0.85rem;
       margin-bottom: 1rem;
     }
+    .passkey-section {
+      background: rgba(20, 184, 166, 0.06);
+      border: 1px solid rgba(20, 184, 166, 0.2);
+      border-radius: 12px;
+      padding: 0.75rem 1rem;
+      margin-bottom: 1rem;
+    }
+    .passkey-info {
+      color: var(--primary-light); font-size: 0.82rem; margin-bottom: 0.6rem;
+    }
     .error-msg {
       background: rgba(239, 68, 68, 0.15);
       border: 1px solid rgba(239, 68, 68, 0.3);
@@ -193,7 +214,8 @@ export class RegisterComponent implements OnInit {
       full_name: ['', [Validators.required, Validators.minLength(2)]],
       age: ['', [Validators.required, Validators.min(0), Validators.max(120)]],
       gender: ['', Validators.required],
-      phone: [''],
+      phone: ['', [Validators.required, Validators.pattern(/^[0-9]{10}$/)]],
+      passkey: ['', [Validators.minLength(4), Validators.maxLength(20)]],
       address: [''],
       city: [''],
       priority: ['normal'],
@@ -233,6 +255,13 @@ export class RegisterComponent implements OnInit {
         this.error = err.error?.error || 'Registration failed. Please try again.';
       }
     });
+  }
+
+  sanitizePhone(): void {
+    const ctrl = this.form.get('phone');
+    if (ctrl?.value) {
+      ctrl.setValue(ctrl.value.replace(/[^0-9]/g, '').slice(0, 10), { emitEvent: false });
+    }
   }
 
   resetForm(): void {

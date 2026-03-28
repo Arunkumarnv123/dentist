@@ -13,31 +13,65 @@ import { AuthService } from '../../services/auth.service';
           <p>Digital Dental Camp Management System</p>
         </div>
 
-        <form (ngSubmit)="login()" class="login-form">
+        <div class="login-tabs">
+          <button class="tab-btn" [class.active]="loginMode === 'staff'" (click)="loginMode = 'staff'">
+            👨‍⚕️ Staff / Doctor
+          </button>
+          <button class="tab-btn" [class.active]="loginMode === 'patient'" (click)="loginMode = 'patient'">
+            🧑‍💼 Patient
+          </button>
+        </div>
+
+        <form (ngSubmit)="login()" class="login-form" *ngIf="loginMode === 'staff'">
           <div class="form-group">
             <label class="form-label">Email</label>
             <input type="email" class="form-control" [(ngModel)]="email" name="email"
-                   placeholder="Enter your email" required autocomplete="email">
+                   placeholder="Enter your email address" required autocomplete="email">
           </div>
 
           <div class="form-group">
             <label class="form-label">Password</label>
             <input type="password" class="form-control" [(ngModel)]="password" name="password"
-                   placeholder="Enter password" required autocomplete="current-password">
+                   placeholder="Enter your password" required autocomplete="current-password">
           </div>
 
           <div *ngIf="error" class="error-msg">{{ error }}</div>
 
-          <button type="submit" class="btn btn-primary btn-lg btn-block" [disabled]="loading">
+          <button type="submit" id="staff-login-btn" class="btn btn-primary btn-lg btn-block" [disabled]="loading">
             {{ loading ? 'Signing in...' : 'Sign In' }}
           </button>
         </form>
 
+        <form (ngSubmit)="loginPatient()" class="login-form" *ngIf="loginMode === 'patient'">
+          <div class="form-group">
+            <label class="form-label">Phone Number</label>
+            <input appPhoneOnly class="form-control" [(ngModel)]="phone" name="phone"
+                   placeholder="10-digit mobile number" required autocomplete="tel">
+          </div>
 
+          <div class="form-group">
+            <label class="form-label">Passkey</label>
+            <input type="password" class="form-control" [(ngModel)]="passkey" name="passkey"
+                   placeholder="Enter your passkey" required autocomplete="current-password">
+          </div>
+
+          <div *ngIf="error" class="error-msg">{{ error }}</div>
+
+          <button type="submit" id="patient-login-btn" class="btn btn-accent btn-lg btn-block" [disabled]="loading">
+            {{ loading ? 'Signing in...' : 'View My Report' }}
+          </button>
+        </form>
 
         <div class="register-link">
-          <p>Are you a patient? <a routerLink="/patient-register">Register here</a></p>
-          <p style="margin-top: 0.5rem">Are you a dentist? <a routerLink="/dentist-register">Register here</a></p>
+          <p *ngIf="loginMode === 'patient'">
+            Registered at camp? Use the phone number and passkey you set during registration.
+          </p>
+          <p *ngIf="loginMode === 'staff'">
+            Are you a dentist? <a routerLink="/dentist-register">Register here</a>
+          </p>
+          <p style="margin-top: 0.5rem">
+            Are you a patient? <a routerLink="/patient-register">Register here</a>
+          </p>
         </div>
       </div>
     </div>
@@ -53,7 +87,7 @@ import { AuthService } from '../../services/auth.service';
     }
     .login-container {
       width: 100%;
-      max-width: 420px;
+      max-width: 440px;
       background: rgba(30, 41, 59, 0.8);
       backdrop-filter: blur(20px);
       border: 1px solid rgba(148, 163, 184, 0.15);
@@ -63,7 +97,7 @@ import { AuthService } from '../../services/auth.service';
     }
     .login-header {
       text-align: center;
-      margin-bottom: 2rem;
+      margin-bottom: 1.5rem;
     }
     .login-icon {
       font-size: 3rem;
@@ -80,6 +114,30 @@ import { AuthService } from '../../services/auth.service';
       color: var(--text-secondary);
       font-size: 0.9rem;
       margin-top: 0.3rem;
+    }
+    .login-tabs {
+      display: flex;
+      gap: 0.5rem;
+      margin-bottom: 1.5rem;
+      background: rgba(15, 23, 42, 0.5);
+      border-radius: 12px;
+      padding: 0.35rem;
+    }
+    .tab-btn {
+      flex: 1;
+      padding: 0.6rem 0.5rem;
+      background: transparent;
+      border: none;
+      border-radius: 8px;
+      color: var(--text-secondary);
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .tab-btn.active {
+      background: var(--primary);
+      color: white;
     }
     .error-msg {
       background: rgba(239, 68, 68, 0.15);
@@ -99,7 +157,8 @@ import { AuthService } from '../../services/auth.service';
     }
     .register-link p {
       color: var(--text-secondary);
-      font-size: 0.9rem;
+      font-size: 0.85rem;
+      margin-bottom: 0.4rem;
     }
     .register-link a {
       color: #14b8a6;
@@ -109,11 +168,19 @@ import { AuthService } from '../../services/auth.service';
     .register-link a:hover {
       text-decoration: underline;
     }
+    .btn-accent {
+      background: linear-gradient(135deg, #f97316, #ea580c);
+      color: white;
+    }
+    .btn-block { width: 100%; }
   `]
 })
 export class LoginComponent {
+  loginMode: 'staff' | 'patient' = 'staff';
   email = '';
   password = '';
+  phone = '';
+  passkey = '';
   error = '';
   loading = false;
 
@@ -124,8 +191,16 @@ export class LoginComponent {
     }
   }
 
+  sanitizePhone(): void {
+    this.phone = this.phone.replace(/[^0-9]/g, '').slice(0, 10);
+  }
+
   login(): void {
     this.error = '';
+    if (!this.email || !this.password) {
+      this.error = 'Please enter your email and password.';
+      return;
+    }
     this.loading = true;
     this.auth.login(this.email, this.password).subscribe({
       next: () => {
@@ -136,6 +211,29 @@ export class LoginComponent {
       error: (err) => {
         this.loading = false;
         this.error = err.error?.error || 'Login failed. Please check your credentials.';
+      }
+    });
+  }
+
+  loginPatient(): void {
+    this.error = '';
+    if (!this.phone || !/^[0-9]{10}$/.test(this.phone)) {
+      this.error = 'Please enter a valid 10-digit phone number.';
+      return;
+    }
+    if (!this.passkey) {
+      this.error = 'Please enter your passkey.';
+      return;
+    }
+    this.loading = true;
+    this.auth.loginWithPasskey(this.phone, this.passkey).subscribe({
+      next: () => {
+        this.loading = false;
+        this.router.navigate(['/patient-portal']);
+      },
+      error: (err) => {
+        this.loading = false;
+        this.error = err.error?.error || 'Invalid phone number or passkey.';
       }
     });
   }

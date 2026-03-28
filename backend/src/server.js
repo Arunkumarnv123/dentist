@@ -98,8 +98,32 @@ app.use((err, req, res, next) => {
 // ── Database sync and start server ──
 async function startServer() {
     try {
-        // Sync database (creates tables if they don't exist)
+        // Sync database (creates tables if they don't exist, does NOT alter existing columns)
         await sequelize.sync();
+
+        // ── Safe migrations: add new columns only if missing ──
+        const queryInterface = sequelize.getQueryInterface();
+        const dialect = sequelize.getDialect();
+
+        // Helper to safely add a column if it doesn't exist
+        const safeAddColumn = async (tableName, columnName, options) => {
+            try {
+                const tableDesc = await queryInterface.describeTable(tableName);
+                if (!tableDesc[columnName]) {
+                    await queryInterface.addColumn(tableName, columnName, options);
+                    console.log(`✅ Added column ${tableName}.${columnName}`);
+                }
+            } catch (e) {
+                console.log(`ℹ️  Column ${tableName}.${columnName}: ${e.message}`);
+            }
+        };
+
+        const { DataTypes } = require('sequelize');
+
+        // Patient table: add passkey and email columns
+        await safeAddColumn('Patients', 'passkey', { type: DataTypes.STRING, allowNull: true });
+        await safeAddColumn('Patients', 'email', { type: DataTypes.STRING, allowNull: true });
+
         const dbType = sequelize.getDialect() === 'postgres' ? 'Remote (Postgres)' : 'Local (SQLite)';
         console.log(`🔌 Connected to ${dbType} database: ${sequelize.config.database || 'database.sqlite'}`);
 

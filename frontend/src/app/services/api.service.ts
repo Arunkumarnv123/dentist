@@ -30,6 +30,18 @@ export class ApiService {
         return this.http.get(`${this.baseUrl}/camps/${campId}/qr`);
     }
 
+    deactivateCamp(campId: string): Observable<any> {
+        return this.http.put(`${this.baseUrl}/camps/${campId}/deactivate`, {});
+    }
+
+    reactivateCamp(campId: string): Observable<any> {
+        return this.http.put(`${this.baseUrl}/camps/${campId}/reactivate`, {});
+    }
+
+    deleteCamp(campId: string): Observable<any> {
+        return this.http.delete(`${this.baseUrl}/camps/${campId}`);
+    }
+
 
     // ── Patients ──
     registerPatient(campId: string, data: any): Observable<any> {
@@ -93,6 +105,14 @@ export class ApiService {
 
     regenerateReport(reportId: string): Observable<any> {
         return this.http.post(`${this.baseUrl}/reports/${reportId}/regenerate`, {});
+    }
+
+    getPatientReports(campId: string, patientId: string): Observable<any> {
+        return this.http.get(`${this.baseUrl}/camps/${campId}/patients/${patientId}/reports`);
+    }
+
+    downloadPatientReport(campId: string, patientId: string): Observable<Blob> {
+        return this.http.get(`${this.baseUrl}/camps/${campId}/patients/${patientId}/report/download`, { responseType: 'blob' });
     }
 
     // ── Analytics ──

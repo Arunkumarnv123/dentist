@@ -6,10 +6,12 @@ import { environment } from '../../environments/environment';
 export interface User {
     id: string;
     name: string;
-    email: string;
-    role: string;
-    camp_ids: string[];
+    email?: string;
     phone?: string;
+    role: string;
+    camp_ids?: string[];
+    patient_id?: string;
+    camp_id?: string;
 }
 
 export interface LoginResponse {
@@ -47,7 +49,7 @@ export class AuthService {
         return localStorage.getItem('dental_token');
     }
 
-    /** Decode JWT payload and check if token is expired (no library needed). */
+    /** Decode JWT payload and check if token is expired. */
     isTokenExpired(): boolean {
         const token = localStorage.getItem('dental_token');
         if (!token) return true;
@@ -56,7 +58,6 @@ export class AuthService {
             if (parts.length !== 3) return true;
             const payload = JSON.parse(atob(parts[1]));
             if (!payload.exp) return false;
-            // exp is in seconds; Date.now() is in milliseconds
             return Date.now() >= payload.exp * 1000;
         } catch {
             return true;
@@ -67,8 +68,19 @@ export class AuthService {
         return !!this.token && !this.isTokenExpired();
     }
 
+    /** Staff login: email + password */
     login(email: string, password: string): Observable<LoginResponse> {
-        return this.http.post<LoginResponse>(`${environment.apiUrl}/auth/login`, { email, password })
+        return this.http.post<LoginResponse>(`${environment.apiUrl}/auth/login`, { identifier: email, credential: password })
+            .pipe(tap(res => {
+                localStorage.setItem('dental_token', res.token);
+                localStorage.setItem('dental_user', JSON.stringify(res.user));
+                this.currentUserSubject.next(res.user);
+            }));
+    }
+
+    /** Patient login: phone + passkey */
+    loginWithPasskey(phone: string, passkey: string): Observable<LoginResponse> {
+        return this.http.post<LoginResponse>(`${environment.apiUrl}/auth/login`, { identifier: phone, credential: passkey })
             .pipe(tap(res => {
                 localStorage.setItem('dental_token', res.token);
                 localStorage.setItem('dental_user', JSON.stringify(res.user));

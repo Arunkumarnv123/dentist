@@ -1,10 +1,10 @@
 const jwt = require('jsonwebtoken');
-const { User } = require('../models');
+const { User, Patient } = require('../models');
 require('dotenv').config();
 
 /**
  * JWT Authentication middleware.
- * Extracts token from Authorization header, verifies it, and attaches user to req.
+ * Supports both staff tokens (userId) and patient tokens (patientId).
  */
 const authenticate = async (req, res, next) => {
     try {
@@ -16,14 +16,33 @@ const authenticate = async (req, res, next) => {
         const token = authHeader.split(' ')[1];
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-        const user = await User.findByPk(decoded.userId);
-        if (!user || !user.is_active) {
-            return res.status(401).json({ error: 'Invalid or inactive user', code: 'UNAUTHORIZED' });
+        // ── Patient token ──
+        if (decoded.type === 'patient' && decoded.patientId) {
+            const patient = await Patient.findByPk(decoded.patientId);
+            if (!patient) {
+                return res.status(401).json({ error: 'Invalid patient token', code: 'UNAUTHORIZED' });
+            }
+            req.patientId = patient.id;
+            req.patient = patient;
+            req.userId = null;
+            req.user = null;
+            req.userRole = 'patient';
+            return next();
         }
 
-        req.user = user;
-        req.userId = user.id;
-        next();
+        // ── Staff token ──
+        if (decoded.userId) {
+            const user = await User.findByPk(decoded.userId);
+            if (!user || !user.is_active) {
+                return res.status(401).json({ error: 'Invalid or inactive user', code: 'UNAUTHORIZED' });
+            }
+            req.user = user;
+            req.userId = user.id;
+            req.userRole = user.role;
+            return next();
+        }
+
+        return res.status(401).json({ error: 'Invalid token payload', code: 'UNAUTHORIZED' });
     } catch (error) {
         if (error.name === 'TokenExpiredError') {
             return res.status(401).json({ error: 'Token expired', code: 'TOKEN_EXPIRED' });
@@ -34,7 +53,6 @@ const authenticate = async (req, res, next) => {
 
 /**
  * Optional authentication — attaches user if token present, but doesn't require it.
- * Used for public endpoints like patient registration.
  */
 const optionalAuth = async (req, res, next) => {
     try {
@@ -42,10 +60,19 @@ const optionalAuth = async (req, res, next) => {
         if (authHeader && authHeader.startsWith('Bearer ')) {
             const token = authHeader.split(' ')[1];
             const decoded = jwt.verify(token, process.env.JWT_SECRET);
-            const user = await User.findByPk(decoded.userId);
-            if (user && user.is_active) {
-                req.user = user;
-                req.userId = user.id;
+
+            if (decoded.type === 'patient' && decoded.patientId) {
+                const patient = await Patient.findByPk(decoded.patientId);
+                if (patient) {
+                    req.patientId = patient.id;
+                    req.patient = patient;
+                }
+            } else if (decoded.userId) {
+                const user = await User.findByPk(decoded.userId);
+                if (user && user.is_active) {
+                    req.user = user;
+                    req.userId = user.id;
+                }
             }
         }
     } catch (e) {
